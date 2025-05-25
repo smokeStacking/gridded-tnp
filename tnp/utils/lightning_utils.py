@@ -70,6 +70,9 @@ class LitWrapper(pl.LightningModule):
                     [batch.var_stds[k] for k in batch.non_gridded_var_names]
                 ).cpu()
             else:
+                assert hasattr(
+                    batch, "var_names"
+                ), "Batch should have 'var_names' to extract var_stds."
                 y_std = torch.as_tensor(
                     [batch.var_stds[k] for k in batch.var_names]
                 ).cpu()
@@ -102,6 +105,9 @@ class LitWrapper(pl.LightningModule):
                     [batch.var_stds[k] for k in batch.non_gridded_var_names]
                 ).cpu()
             else:
+                assert hasattr(
+                    batch, "var_names"
+                ), "Batch should have 'var_names' to extract var_stds."
                 y_std = torch.as_tensor(
                     [batch.var_stds[k] for k in batch.var_names]
                 ).cpu()

@@ -1,8 +1,9 @@
 import argparse
-import cdsapi
-import os
 import multiprocessing
+import os
 from typing import List
+
+import cdsapi
 
 
 def download_era5_pl_data(

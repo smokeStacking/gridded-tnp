@@ -103,11 +103,11 @@ To acknowledge the repository or paper, please cite
 
 ```bibtex
 @misc{ashman2024griddedtransformerneuralprocesses,
-      title={Gridded Transformer Neural Processes for Large Unstructured Spatio-Temporal Data}, 
+      title={Gridded Transformer Neural Processes for Large Unstructured Spatio-Temporal Data},
       author={Matthew Ashman and Cristiana Diaconu and Eric Langezaal and Adrian Weller and Richard E. Turner},
       year={2024},
       eprint={2410.06731},
       archivePrefix={arXiv},
       primaryClass={stat.ML},
-      url={https://arxiv.org/abs/2410.06731}, 
+      url={https://arxiv.org/abs/2410.06731},
 }

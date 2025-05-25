@@ -43,6 +43,7 @@ class ConvBlock(nn.Module):
 
         self.activation = activation
 
+        padding: int | list[int]
         if isinstance(kernel_size, int):
             padding = kernel_size // 2
         else:
@@ -76,6 +77,7 @@ class ResConvBlock(nn.Module):
         self.num_conv_layers = num_conv_layers
         assert num_conv_layers in [1, 2]
 
+        padding: int | list[int]
         if isinstance(kernel_size, int):
             if kernel_size % 2 == 0:
                 raise ValueError(f"kernel_size={kernel_size}, but should be odd.")

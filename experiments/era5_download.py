@@ -1,8 +1,9 @@
-import cdsapi
 import argparse
-from multiprocessing import Pool
 import os
+from multiprocessing import Pool
 from typing import Tuple
+
+import cdsapi
 
 
 def download_data(args: Tuple[int, int, str]):

@@ -24,7 +24,7 @@ generators:
     deterministic: True
     deterministic_seed: 0
 
-  test: 
+  test:
     _target_: tnp.data.pregenerated.PreGeneratedSyntheticGenerator
     data_dir: ${data.test_data_dir}
     samples_per_epoch: 16384

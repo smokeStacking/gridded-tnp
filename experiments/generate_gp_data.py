@@ -1,14 +1,12 @@
-import os
 import argparse
-import torch
+import multiprocessing as mp
+import os
+from functools import partial
 from typing import Tuple
 
-import multiprocessing as mp
-from functools import partial
-
-from omegaconf import OmegaConf, DictConfig
+import torch
 from hydra.utils import instantiate
-
+from omegaconf import DictConfig, OmegaConf
 from tqdm import tqdm
 
 

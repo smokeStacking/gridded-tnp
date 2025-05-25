@@ -1,5 +1,5 @@
 data:
-  data_dir: ./data/mm-era5
+  data_dir: /scratch/cdd43/data/era5  #./data/era5
   station_coords_fname: ./data/era5/hadisd_station_gridded.pt
   train_fnames:
     - 1-2009.nc

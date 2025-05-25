@@ -1,15 +1,9 @@
-import torch
-
-from tnp.networks.grid_encoders.grid_encoder import PseudoTokenGridEncoder
-from tnp.networks.attention_layers import MultiHeadCrossAttentionLayer
-
-
-import torch
 import einops
+import torch
 
-from tnp.utils.grids import flatten_grid, nearest_gridded_neighbours
-from tnp.networks.grid_encoders.grid_encoder import PseudoTokenGridEncoder
 from tnp.networks.attention_layers import MultiHeadCrossAttentionLayer
+from tnp.networks.grid_encoders.pt_grid_encoders import PseudoTokenGridEncoder
+from tnp.utils.grids import flatten_grid, nearest_gridded_neighbours
 
 
 def test_grid_encoder(dim: int = 1, emb_dim=128):
@@ -24,8 +18,8 @@ def test_grid_encoder(dim: int = 1, emb_dim=128):
         encoder = PseudoTokenGridEncoder(
             embed_dim=emb_dim,
             mhca_layer=layer,
-            grid_range=[[-1, 1]] * dim,
-            points_per_dim=[16] * dim,
+            grid_range=tuple(((-1.0, 1.0),) * dim),
+            points_per_dim=tuple([16]) * dim,
         )
 
         x_grid, z_grid = encoder(

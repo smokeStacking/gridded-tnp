@@ -51,6 +51,7 @@ class GroundTruthPredictor(ABC):
     def sample_outputs(
         self,
         x: torch.Tensor,
+        sample_shape: Optional[torch.Size] = None,
     ) -> torch.Tensor:
         raise NotImplementedError
 

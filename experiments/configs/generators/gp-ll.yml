@@ -46,7 +46,7 @@ data:
   target_range: ${params.grid_range}
   train_data_dir: big-gp/train-large-lengthscale/
   test_data_dir: big-gp/test-large-lengthscale/
-  
+
 misc:
   num_workers: 0
   num_val_workers: 0

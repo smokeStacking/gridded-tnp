@@ -12,7 +12,7 @@ import dask
 import numpy as np
 import torch
 import xarray as xr
-from dateutil.relativedelta import relativedelta
+from dateutil.relativedelta import relativedelta  # type: ignore
 
 from tnp.data.base import Batch, DataGenerator
 from tnp.data.era5.normalisation import locations as var_means
@@ -51,7 +51,7 @@ class BaseERA5DataGenerator(DataGenerator, ABC):
         lazy_loading: bool = True,
         wrap_longitude: bool = False,
         load_data: bool = True,
-        data_dir: Optional[str] = None,
+        data_dir: Optional[str] = "./data/era5",
         fnames: Optional[List[str]] = None,
         # url: str = "gs://gcp-public-data-arco-era5/ar/1959-2022-full_37-1h-0p25deg-chunk-1.zarr-v2",
         url: str = "gs://weatherbench2/datasets/era5/1959-2023_01_10-full_37-1h-0p25deg-chunk-1.zarr",
@@ -82,6 +82,8 @@ class BaseERA5DataGenerator(DataGenerator, ABC):
 
         # Whether to pre-load the data.
         self.data = None
+        if data_dir is None:
+            raise ValueError("data_dir cannot be None")  # silence mypy
         self.data_dir = os.path.expanduser(data_dir)
         self.fnames = fnames
         self.url = url
@@ -201,6 +203,7 @@ class BaseERA5DataGenerator(DataGenerator, ABC):
         self.data = dataset
         if not self.lazy_loading:
             t0 = time.time()
+            assert self.data is not None
             self.data = self.data.compute(
                 num_workers=torch.utils.data.get_worker_info().num_workers
             )

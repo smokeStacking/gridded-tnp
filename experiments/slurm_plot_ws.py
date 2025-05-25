@@ -10,11 +10,11 @@ import lightning.pytorch as pl
 import torch
 from hydra.utils import instantiate
 from omegaconf import DictConfig
+from plot_windspeed_us import plot_windspeed_us
 
 import wandb
 from tnp.utils.experiment_utils import deep_convert_dict, extract_config
 from tnp.utils.lightning_utils import LitWrapper
-from plot_windspeed_us import plot_windspeed_us
 
 warnings.filterwarnings("ignore", category=UserWarning)
 logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.INFO)
@@ -53,9 +53,9 @@ def initialize_evaluation() -> DictConfig:
     config, _ = extract_config(raw_config, config_changes)
 
     # Initialise wandb.
-    api = wandb.Api()
+    api = wandb.Api()  # type: ignore[attr-defined]
     run = api.run(args.run_path)
-    run = wandb.init(
+    run = wandb.init(  # type: ignore[attr-defined]
         resume="must",
         project=run.project,
         name=run.name,

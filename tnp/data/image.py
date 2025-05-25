@@ -87,7 +87,7 @@ class ImageGenerator(DataGenerator):  # pylint: disable=too-many-instance-attrib
         self.batch_counter = 0
         return self
 
-    def generate_batch(self) -> Batch:
+    def generate_batch(self, batch_shape: Optional[torch.Size] = None) -> Batch:
         """Generate batch of data.
 
         Returns:

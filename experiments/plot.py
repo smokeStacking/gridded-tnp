@@ -212,8 +212,8 @@ def plot(
             return
 
         fname = f"fig/{name}/{i:03d}"
-        if wandb.run is not None and logging:
-            wandb.log({fname: wandb.Image(fig)})
+        if wandb.run is not None and logging:  # type: ignore[attr-defined]
+            wandb.log({fname: wandb.Image(fig)})  # type: ignore[attr-defined]
         elif savefig:
             if not os.path.isdir(f"fig/{name}"):
                 os.makedirs(f"fig/{name}")

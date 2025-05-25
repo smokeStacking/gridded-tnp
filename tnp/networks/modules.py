@@ -4,18 +4,15 @@ import torch
 from check_shapes import check_shapes
 from torch import nn
 
+
 class ModuleOnPreSpecifiedDomain(nn.Module):
     def __init__(
         self,
         *,
         module: type[nn.Module],
         x_range: Tuple[
-            Tuple[
-                float,
-            ],
-            Tuple[
-                float,
-            ],
+            Tuple[float,],
+            Tuple[float,],
         ],
         default_val: float = 0.0,
     ):
@@ -44,20 +41,16 @@ class ModuleOnFourierExpandedInput(nn.Module):
         *,
         module: type[nn.Module],
         x_range: Tuple[
-            Tuple[
-                float,
-            ],
-            Tuple[
-                float,
-            ],
+            Tuple[float,],
+            Tuple[float,],
         ],
         num_fourier: int,
     ):
         super().__init__()
 
         self.module = module
-        x_range = [list(item) for item in zip(*x_range)]
-        self.x_range = torch.as_tensor(x_range)
+        x_range_transposed = [list(item) for item in zip(*x_range)]
+        self.x_range = torch.as_tensor(x_range_transposed)
         self.num_fourier = num_fourier
 
         periods = [

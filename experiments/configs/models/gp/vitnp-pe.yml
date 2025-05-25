@@ -100,7 +100,7 @@ params:
   top_k_ctot: 9
   roll_dims: null
   use_nn: True
-  dist_fn: 
+  dist_fn:
     _target_: tnp.utils.distances.sq_dist
     _partial_: True
 

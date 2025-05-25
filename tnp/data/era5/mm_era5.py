@@ -7,6 +7,7 @@ from tnp.data.base import MultiModalBatch
 from tnp.data.era5.era5 import (
     BaseERA5Batch,
     BaseERA5DataGeneratorWithReset,
+    Batch,
     ERA5DataGenerator,
 )
 from tnp.data.era5.normalisation import locations as var_means
@@ -14,7 +15,7 @@ from tnp.data.era5.normalisation import scales as var_stds
 
 
 @dataclass
-class ERA5MultiModalBatch(MultiModalBatch, BaseERA5Batch):
+class ERA5MultiModalBatch(MultiModalBatch, BaseERA5Batch, Batch):
     time_grid: Optional[torch.Tensor] = None
 
 

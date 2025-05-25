@@ -151,6 +151,7 @@ class PseudoTokenTEGridEncoderThroughTime(BasePseudoTokenTEGridEncoder):
 
         return x_grid, z_grid
 
+
 class OOTGPseudoTokenTEGridEncoder(nn.Module):
     def __init__(
         self,
@@ -213,6 +214,7 @@ class OOTGPseudoTokenTEGridEncoder(nn.Module):
 
         return x_grid, z_grid
 
+
 @check_shapes(
     "x: [m, n, dx]",
     "z: [m, n, dz]",
@@ -233,7 +235,7 @@ def te_mhca_to_grid(
     # Get number of grid points.
     x_grid_flat, _ = flatten_grid(x_grid)
     num_grid_points = x_grid_flat.shape[1]
-    
+
     # (batch_size, k)
     nearest_idx, _ = nearest_gridded_neighbours(x, x_grid, k=1)
     nearest_idx = nearest_idx[..., 0]

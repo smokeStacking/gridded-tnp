@@ -1,18 +1,34 @@
-from typing import Union
 import time
+from typing import Union
 
-import torch
-from torch.profiler import profile, record_function, ProfilerActivity
 import einops
-from tnp.utils.grids import flatten_grid
-from tnp.networks.attention_layers import MultiHeadCrossAttentionLayer
-from tnp.networks.attention import MultiHeadCrossAttention
+import torch
+from torch.profiler import ProfilerActivity, profile, record_function
 
-from tnp.utils.grids import (
-    flatten_grid,
-    nearest_gridded_neighbours,
-)
-from tnp.networks.grid_encoders.pt_grid_encoders import associative_scan, mhca_to_grid
+from tnp.networks.attention import MultiHeadCrossAttention
+from tnp.networks.attention_layers import MultiHeadCrossAttentionLayer
+from tnp.networks.grid_encoders.pt_grid_encoders import mhca_to_grid
+from tnp.utils.grids import flatten_grid, nearest_gridded_neighbours
+
+
+def complex_log(float_input: torch.Tensor, eps=1e-6) -> torch.ComplexType:
+    eps = float_input.new_tensor(eps)
+    real = float_input.abs().maximum(eps).log()
+    imag = (float_input < 0).to(float_input.dtype) * torch.pi
+
+    return torch.complex(real, imag)
+
+
+def associative_scan(
+    values: torch.Tensor, coeffs: torch.Tensor, dim: int
+) -> torch.Tensor:
+    log_values = complex_log(values.float())
+    log_coeffs = complex_log(coeffs.float())
+    a_star = torch.cumsum(log_coeffs, dim=dim)
+    log_x0_plus_b_star = torch.logcumsumexp(log_values - a_star, dim=dim)
+    log_x = a_star + log_x0_plus_b_star
+
+    return torch.exp(log_x).real
 
 
 def old_mhca_to_grid(
@@ -108,25 +124,30 @@ def old_mhca_to_grid(
 
 
 def generate_fake_data(grid_shape=(8,), emb_dim=128):
-    x_off_grid = torch.linspace(-1, 1, 10)[None, :, None].repeat(1,1,len(grid_shape))
+    x_off_grid = torch.linspace(-1, 1, 10)[None, :, None].repeat(1, 1, len(grid_shape))
     z_off_grid = torch.randn(x_off_grid.shape[:-1] + (emb_dim,))
     x_on_grid = torch.stack(
-            torch.meshgrid(
-                *[
-                    torch.linspace(-1, 1, steps=dim, dtype=torch.float) for dim in grid_shape
-                ],
-                indexing="ij"
-            ),
-            dim=-1,
-        )[None, ...]
+        torch.meshgrid(
+            *[
+                torch.linspace(-1, 1, steps=dim, dtype=torch.float)
+                for dim in grid_shape
+            ],
+            indexing="ij",
+        ),
+        dim=-1,
+    )[None, ...]
     z_on_grid = torch.randn(x_on_grid.shape[:-1] + (emb_dim,))
     assert x_on_grid.dim() == len(grid_shape) + 2
     return x_off_grid, z_off_grid, x_on_grid, z_on_grid
 
 
 def generate_trace(grid_shape=(8), emb_dim=128):
-    x_off_grid, z_off_grid, x_on_grid, z_on_grid = generate_fake_data(grid_shape, emb_dim)
-    layer = MultiHeadCrossAttentionLayer(embed_dim=emb_dim, num_heads=8, head_dim=16, feedforward_dim=emb_dim)
+    x_off_grid, z_off_grid, x_on_grid, z_on_grid = generate_fake_data(
+        grid_shape, emb_dim
+    )
+    layer = MultiHeadCrossAttentionLayer(
+        embed_dim=emb_dim, num_heads=8, head_dim=16, feedforward_dim=emb_dim
+    )
     latents = torch.randn(x_on_grid.shape[0], *grid_shape, emb_dim)
 
     with profile(activities=[ProfilerActivity.CPU], record_shapes=True) as prof:
@@ -137,20 +158,32 @@ def generate_trace(grid_shape=(8), emb_dim=128):
 
 
 def test_validity(grid_shape=(8), emb_dim=128):
-    x_off_grid, z_off_grid, x_on_grid, z_on_grid = generate_fake_data(grid_shape, emb_dim)
+    x_off_grid, z_off_grid, x_on_grid, z_on_grid = generate_fake_data(
+        grid_shape, emb_dim
+    )
 
     with torch.no_grad():
-        layer = MultiHeadCrossAttentionLayer(embed_dim=emb_dim, num_heads=8, head_dim=16, feedforward_dim=emb_dim)
+        layer = MultiHeadCrossAttentionLayer(
+            embed_dim=emb_dim, num_heads=8, head_dim=16, feedforward_dim=emb_dim
+        )
 
         latents = torch.randn(x_on_grid.shape[0], *grid_shape, emb_dim)
-        out_current = mhca_to_grid(x_off_grid, z_off_grid, x_on_grid, z_on_grid, latents, layer)
-        out_old = old_mhca_to_grid(x_off_grid, z_off_grid, x_on_grid, z_on_grid, latents, layer)
+        out_current = mhca_to_grid(
+            x_off_grid, z_off_grid, x_on_grid, z_on_grid, latents, layer
+        )
+        out_old = old_mhca_to_grid(
+            x_off_grid, z_off_grid, x_on_grid, z_on_grid, latents, layer
+        )
     assert torch.equal(out_current, out_old)
 
 
 def speed_test(method, grid_shape=(8), emb_dim=128, avg=100):
-    x_off_grid, z_off_grid, x_on_grid, z_on_grid = generate_fake_data(grid_shape, emb_dim)
-    layer = MultiHeadCrossAttentionLayer(embed_dim=emb_dim, num_heads=8, head_dim=16, feedforward_dim=emb_dim)
+    x_off_grid, z_off_grid, x_on_grid, z_on_grid = generate_fake_data(
+        grid_shape, emb_dim
+    )
+    layer = MultiHeadCrossAttentionLayer(
+        embed_dim=emb_dim, num_heads=8, head_dim=16, feedforward_dim=emb_dim
+    )
     latents = torch.randn(x_on_grid.shape[0], *grid_shape, emb_dim)
 
     start = time.time()
@@ -160,10 +193,22 @@ def speed_test(method, grid_shape=(8), emb_dim=128, avg=100):
     avg_time = (time.time() - start) / avg * 1000
     print(f"{method.__name__} took {avg_time} ms on average over {avg} runs.")
 
+
 if __name__ == "__main__":
     test_validity(grid_shape=(120,))
     test_validity(grid_shape=(120, 240))
-    speed_test(old_mhca_to_grid, grid_shape=(120,240,))
+    speed_test(
+        old_mhca_to_grid,
+        grid_shape=(
+            120,
+            240,
+        ),
+    )
 
-    speed_test(mhca_to_grid, grid_shape=(120,240,))
-
+    speed_test(
+        mhca_to_grid,
+        grid_shape=(
+            120,
+            240,
+        ),
+    )

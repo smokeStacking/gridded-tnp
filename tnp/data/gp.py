@@ -69,7 +69,9 @@ class GPGenerator(ABC):
         return GPGroundTruthPredictor(kernel=kernel, likelihood=likelihood)
 
     def sample_outputs(
-        self, x: torch.Tensor
+        self,
+        x: torch.Tensor,
+        sample_shape: Optional[torch.Size] = None,
     ) -> Tuple[torch.Tensor, GroundTruthPredictor]:
         gt_pred = self.set_up_gp()
         y = gt_pred.sample_outputs(x)

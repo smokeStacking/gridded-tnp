@@ -1,18 +1,17 @@
 import copy
 import os
 import warnings
-from typing import Callable, List, Tuple
 from functools import partial
+from typing import Callable, Dict, List, Tuple
 
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import matplotlib
 import matplotlib.pyplot as plt
-import torch
-from torch import nn
 import numpy as np
-from scipy.stats import anderson, kstest
-from scipy.stats import norm
+import torch
+from scipy.stats import anderson, kstest, norm
+from torch import nn
 
 import wandb
 from tnp.data.era5.mm_era5 import ERA5MultiModalBatch
@@ -167,7 +166,7 @@ def plot_windspeed_us(
             f"Dataset: {i}. AD={res.statistic:.3f}. Critical values: {res.critical_values}. Significance levels: {res.significance_level}. KS={ks_res.statistic:.3f}. p-value={ks_res.pvalue:.3f}. log_prob={log_prob.mean():.3f}"
         )
 
-        cache = {}
+        cache: Dict[str, Dict[str, Dict[str, np.ndarray]]] = {}
         # for fig_name, x_plot, y_plot in zip(
         #     # ("context", "ground_truth", "pred_mean", "pred_std"),
         #     # (xc, x, x, x),
@@ -471,8 +470,8 @@ def plot_windspeed_us(
                 fig_name = f"{pl_name}_{fig_name}_pc={pc:.2f}_ll={pred_ll:.2f}_range={lat_range[0]}-{lat_range[1]}_{lon_range[0]}-{lon_range[1]}.png"
 
                 fname = f"fig/{name}/{i:02d}/{fig_name}"
-                if wandb.run is not None and logging:
-                    wandb.log({fname: wandb.Image(fig)})
+                if wandb.run is not None and logging:  # type: ignore[attr-defined]
+                    wandb.log({fname: wandb.Image(fig)})  # type: ignore[attr-defined]
 
                 if savefig:
                     if not os.path.isdir(f"fig/{name}/{i:02d}"):

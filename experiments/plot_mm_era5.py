@@ -128,8 +128,8 @@ def plot_mm_era5(
                 plt.tight_layout()
 
                 fname = f"fig/{name}/{i:03d}/{var_name}/{fig_name}"
-                if wandb.run is not None and logging:
-                    wandb.log({fname: wandb.Image(fig)})
+                if wandb.run is not None and logging:  # type: ignore[attr-defined]
+                    wandb.log({fname: wandb.Image(fig)})  # type: ignore[attr-defined]
                 elif savefig:
                     if not os.path.isdir(f"fig/{name}/{i:03d}"):
                         os.makedirs(f"fig/{name}/{i:03d}")

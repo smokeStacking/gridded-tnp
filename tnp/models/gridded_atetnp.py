@@ -14,8 +14,8 @@ from ..networks.grid_encoders import (
     SetConv,
 )
 from ..networks.transformer import GriddedTransformerEncoder
-from ..utils.helpers import preprocess_observations
 from ..utils.dropout import dropout_all
+from ..utils.helpers import preprocess_observations
 from .base import (
     ConditionalNeuralProcess,
     MultiModalConditionalNeuralProcess,
@@ -23,8 +23,10 @@ from .base import (
 )
 from .tnp import TNPDecoder
 
+
 class GriddedATETNPEncoder(nn.Module):
     force_dropout = False
+
     def __init__(
         self,
         tetransformer_encoder: GriddedTransformerEncoder,
@@ -41,14 +43,12 @@ class GriddedATETNPEncoder(nn.Module):
         self.basis_fn = basis_fn
         self.p_basis_dropout = p_basis_dropout
 
-    @check_shapes(
-        "xc: [m, ..., dx]", "zc: [m, ..., dz]", "return: [m, ..., dz]"
-    )
+    @check_shapes("xc: [m, ..., dx]", "zc: [m, ..., dz]", "return: [m, ..., dz]")
     def add_basis(self, xc, zc):
         # Obtain basis functions and concatenate.
-        if self.basis_fn.num_fourier!=0:
+        if self.basis_fn.num_fourier != 0:
             zc_basis = self.basis_fn(xc)
-            
+
             # Dropout
             if self.force_dropout:
                 zc_basis = dropout_all(zc_basis, 1.0, True)
@@ -91,6 +91,7 @@ class GriddedATETNPEncoder(nn.Module):
 
 class MultiModalGriddedATETNPEncoder(nn.Module):
     force_dropout = False
+
     def __init__(
         self,
         tetransformer_encoder: GriddedTransformerEncoder,
@@ -120,18 +121,19 @@ class MultiModalGriddedATETNPEncoder(nn.Module):
             torch.randn(self.grid_encoder.embed_dim),
             requires_grad=True,
         )
-    @check_shapes(
-        "xc: [m, ..., dx]", "zc: [m, ..., dz]", "return: [m, ..., dz]"
-    )
+
+    @check_shapes("xc: [m, ..., dx]", "zc: [m, ..., dz]", "return: [m, ..., dz]")
     def add_basis(self, xc, zc):
         # Obtain basis functions and concatenate.
-        if self.basis_fn.num_fourier!=0:
+        if self.basis_fn.num_fourier != 0:
             # Take only the spatial dimensions
             if self.grid_encoder.time_dim is not None:
-                zc_basis = self.basis_fn(xc[..., torch.arange(xc.shape[-1])!=self.grid_encoder.time_dim])
+                zc_basis = self.basis_fn(
+                    xc[..., torch.arange(xc.shape[-1]) != self.grid_encoder.time_dim]
+                )
             else:
                 zc_basis = self.basis_fn(xc)
-            
+
             # Dropout
             if self.force_dropout:
                 zc_basis = dropout_all(zc_basis, 1.0, True)
@@ -180,6 +182,7 @@ class MultiModalGriddedATETNPEncoder(nn.Module):
 
 class OOTGGriddedATETNPEncoder(nn.Module):
     force_dropout = False
+
     def __init__(
         self,
         tetransformer_encoder: GriddedTransformerEncoder,
@@ -197,15 +200,13 @@ class OOTGGriddedATETNPEncoder(nn.Module):
         self.y_grid_encoder = y_grid_encoder
         self.basis_fn = basis_fn
         self.p_basis_dropout = p_basis_dropout
-    
-    @check_shapes(
-        "xc: [m, ..., dx]", "zc: [m, ..., dz]", "return: [m, ..., dz]"
-    )
+
+    @check_shapes("xc: [m, ..., dx]", "zc: [m, ..., dz]", "return: [m, ..., dz]")
     def add_basis(self, xc, zc):
         # Obtain basis functions and concatenate.
-        if self.basis_fn.num_fourier!=0:
+        if self.basis_fn.num_fourier != 0:
             zc_basis = self.basis_fn(xc)
-            
+
             # Dropout
             if self.force_dropout:
                 zc_basis = dropout_all(zc_basis, 1.0, True)
@@ -247,7 +248,7 @@ class OOTGGriddedATETNPEncoder(nn.Module):
 
         # Encode to grid.
         xc_grid, zc_grid = self.grid_encoder(xc, zc, xc_grid, zc_grid)
-        
+
         zt = self.tetransformer_encoder(xc_grid, zc_grid, xt, zt)
 
         return zt
