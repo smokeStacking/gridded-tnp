@@ -43,7 +43,7 @@ generators:
     predict_stations: True
 misc:
   project: ootg-era5
-  num_workers: 10
+  num_workers: 24
   num_val_workers: 8
   pl_logging: True
 
