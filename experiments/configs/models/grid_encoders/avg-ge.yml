@@ -1,0 +1,5 @@
+grid_encoder:
+  _target_: tnp.networks.grid_encoders.average_grid_encoder.AverageGridEncoder
+  embed_dim: ${params.embed_dim}
+  grid_range: ${params.grid_range}
+  points_per_dim: ${params.grid_encoder_grid_shape}

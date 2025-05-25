@@ -1,0 +1,65 @@
+generators:
+  train:
+    _target_: tnp.data.pregenerated.PreGeneratedSyntheticGenerator
+    data_dir: ${data.train_data_dir}
+    samples_per_epoch: 8_000
+    batch_size: 8
+
+  val:
+    _target_: tnp.data.gp.RandomScaleGPGeneratorSameInputs
+    kernel: ${gp_kernel}
+    min_log10_lengthscale: -1.0
+    max_log10_lengthscale: -1.0
+    noise_std: 0.1
+    ard_num_dims: ${params.dim_x}
+    dim: ${params.dim_x}
+    samples_per_epoch: 0
+    batch_size: 16
+    context_range: ${data.context_range}
+    target_range: ${data.target_range}
+    min_nc: ${params.min_nc}
+    max_nc: ${params.max_nc}
+    min_nt: ${params.min_nt}
+    max_nt: ${params.max_nt}
+    deterministic: True
+    deterministic_seed: 0
+
+  test: 
+    _target_: tnp.data.pregenerated.PreGeneratedSyntheticGenerator
+    data_dir: ${data.test_data_dir}
+    samples_per_epoch: 16384
+    batch_size: 16
+    random_sample: False
+
+gp_kernel:
+  _target_: gpytorch.kernels.GridInterpolationKernel
+  _partial_: True
+  base_kernel:
+    _target_: gpytorch.kernels.RBFKernel
+    ard_num_dims: ${params.dim_x}
+  grid_size: 100
+  grid_bounds: ${params.grid_range}
+  num_dims: ${params.dim_x}
+
+data:
+  context_range: ${params.grid_range}
+  target_range: ${params.grid_range}
+  train_data_dir: data/big-gp/train/
+  test_data_dir: data/big-gp/test/
+
+misc:
+  num_workers: 0
+  num_val_workers: 0
+  plot_interval: 10
+  project: "big-gp"
+  eval_name: "test"
+  lightning_eval: True
+
+params:
+  dim_x: 2
+  dim_y: 1
+  min_nc: 10_000
+  max_nc: 10_000
+  min_nt: 1_000
+  max_nt: 1_000
+  grid_range: [[-6.0, 6.0], [-6.0, 6.0]]

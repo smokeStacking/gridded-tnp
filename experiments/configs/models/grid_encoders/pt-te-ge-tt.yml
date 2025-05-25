@@ -1,0 +1,23 @@
+grid_encoder:
+  _target_: tnp.networks.grid_encoders.PseudoTokenTEGridEncoderThroughTime
+  embed_dim: ${params.embed_dim}
+  mhca_layer: ${grid_encoder_te_mhca_layer}
+  points_per_unit_dim: ${params.points_per_unit_dim}
+  margin: ${params.margin}
+  time_dim: ${params.time_dim}
+
+grid_encoder_te_mhca_layer:
+  _target_: tnp.networks.teattention_layers.MultiHeadCrossTEAttentionLayer
+  embed_dim: ${params.embed_dim}
+  num_heads: ${params.num_heads}
+  head_dim: ${params.head_dim}
+  feedforward_dim: ${params.embed_dim}
+  norm_first: ${params.norm_first}
+  kernel: ${mhca_kernel}
+
+mhca_kernel:
+  _target_: tnp.networks.mlp.MLP
+  in_dim: ${params.dim_x}
+  out_dim: ${params.num_heads}
+  num_layers: 2
+  width: ${params.num_heads}

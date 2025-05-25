@@ -1,0 +1,72 @@
+model:
+  _target_: tnp.models.convcnp.OOTGConvCNP
+  encoder: ${ootg_convcnp_encoder}
+  decoder: ${tnp_decoder}
+  likelihood: ${likelihood}
+
+ootg_convcnp_encoder:
+  _target_: tnp.models.convcnp.OOTGConvCNPEncoder
+  conv_net: ${cnn}
+  grid_encoder: ${setconv_encoder}
+  grid_decoder: ${setconv_decoder}
+  z_encoder: ${z_encoder}
+
+setconv_encoder:
+  _target_: tnp.networks.grid_encoders.OOTGSetConv
+  dims: ${params.dim_distance}
+  grid_shape: ${params.grid_encoder_grid_shape}
+  dist_fn: ${params.dist_fn}
+  use_nn: ${params.use_nn}
+
+setconv_decoder:
+  _target_: tnp.networks.grid_decoders.SetConvGridDecoder
+  dim: ${params.dim_distance}
+  dist_fn: ${params.dist_fn}
+  top_k_ctot: ${params.top_k_ctot}
+  roll_dims: ${params.roll_dims}
+
+z_encoder:
+  _target_: tnp.networks.mlp.MLP
+  in_dim: ${eval:'${params.dim_y} + ${params.dim_gridded_y} + 2'}
+  out_dim: ${params.num_channels}
+  num_layers: 2
+  width: ${params.num_channels}
+
+tnp_decoder:
+  _target_: tnp.models.tnp.TNPDecoder
+  z_decoder: ${z_decoder}
+
+z_decoder:
+  _target_: tnp.networks.mlp.MLP
+  in_dim: ${params.num_channels}
+  out_dim: ${eval:'2 * ${params.dim_y}'}
+  num_layers: 2
+  width: ${params.num_channels}
+
+likelihood:
+  _target_: tnp.likelihoods.gaussian.HeteroscedasticNormalLikelihood
+
+optimiser:
+  _target_: torch.optim.AdamW
+  _partial_: True
+  lr: 5.0e-4
+
+params:
+  epochs: 300
+  grid_encoder_grid_shape: [64, 128]
+  use_nn: True
+  dim_distance: 1
+  top_k_ctot: 27
+  roll_dims: null
+  dist_fn:
+    _target_: tnp.utils.distances.haversine_dist
+    _partial_: True
+    lonlat_dims: [-1, -2]
+
+misc:
+  name: OOTG-ConvCNP-G${params.grid_encoder_grid_shape}-L${params.num_blocks}-C${params.num_channels}-K${params.kernel_size}
+  resume_from_checkpoint: null
+  gradient_clip_val: 0.5
+  plot_interval: 10
+  logging: True
+  pl_logging: True

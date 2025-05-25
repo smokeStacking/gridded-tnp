@@ -1,0 +1,6 @@
+grid_decoder:
+  _target_: tnp.networks.grid_decoders.SetConvGridDecoder
+  dim: ${params.dim_distance}
+  dist_fn: ${params.dist_fn}
+  top_k_ctot: ${params.top_k_ctot}
+  roll_dims: ${params.roll_dims}

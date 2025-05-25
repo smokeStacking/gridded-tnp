@@ -1,0 +1,71 @@
+generators:
+  train:
+    _target_: tnp.data.era5.ootg_era5.ERA5StationOOTGDataGenerator
+    data_dir: ${data.data_dir}
+    fnames: ${data.train_fnames}
+    station_coords_fname: ${data.station_coords_fname}
+    min_pc: ${params.min_pc}
+    max_pc: ${params.max_pc}
+    pt: ${params.pt}
+    lat_range: ${params.lat_range}
+    lon_range: ${params.lon_range}
+    samples_per_epoch: 8_000
+    batch_size: 8
+    use_time: False
+    data_vars: ${params.data_vars}
+    gridded_var_names: ${params.gridded_var_names}
+    non_gridded_var_names: ${params.non_gridded_var_names}
+    coarsen_factors: ${params.coarsen_factors}
+    lazy_loading: True
+    time_range: ${params.train_time_range}
+    load_data: True
+    predict_stations: True
+  val:
+    _target_: tnp.data.era5.ootg_era5.ERA5StationOOTGDataGenerator
+    data_dir: ${data.data_dir}
+    fnames: ${data.val_fnames}
+    station_coords_fname: ${data.station_coords_fname}
+    min_pc: ${params.min_pc}
+    max_pc: ${params.max_pc}
+    pt: ${params.pt}
+    lat_range: ${params.lat_range}
+    lon_range: ${params.lon_range}
+    samples_per_epoch: 2048
+    batch_size: 8
+    use_time: False
+    data_vars: ${params.data_vars}
+    gridded_var_names: ${params.gridded_var_names}
+    non_gridded_var_names: ${params.non_gridded_var_names}
+    coarsen_factors: ${params.coarsen_factors}
+    lazy_loading: True
+    time_range: ${params.val_time_range}
+    load_data: True
+    predict_stations: True
+misc:
+  project: ootg-era5
+  num_workers: 10
+  num_val_workers: 8
+  pl_logging: True
+
+params:
+  dim_x: 2
+  dim_y: 1
+  dim_gridded_y: 1
+  data_vars:
+    - "t2m"
+    - "skt"
+  gridded_var_names:
+    - "skt"
+  non_gridded_var_names:
+    - "t2m"
+  train_time_range: ["2009-01-01", "2017-12-31"]
+  val_time_range: ["2018-01-01", "2018-12-31"]
+  lat_range: [-90., 90.]
+  lon_range: [-180., 180.]
+  min_pc: 0.0001
+  max_pc: 0.3
+  pt: 1.0
+  coarsen_factors: [4, 4]
+  grid_range:
+    - ${params.lat_range}
+    - ${params.lon_range}

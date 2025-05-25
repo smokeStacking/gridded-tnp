@@ -1,0 +1,7 @@
+grid_encoder:
+  _target_: tnp.networks.grid_encoders.SetConvThroughTime
+  dims: ${params.dim_distance}
+  grid_range: ${params.grid_range}
+  points_per_dim: ${params.grid_encoder_grid_shape}
+  use_nn: ${params.use_nn}
+  dist_fn: ${params.dist_fn}

@@ -1,0 +1,112 @@
+model:
+  _target_: tnp.models.gridded_atetnp.OOTGGriddedATETNP
+  encoder: ${swinatetnp_encoder}
+  decoder: ${tnp_decoder}
+  likelihood: ${likelihood}
+
+swinatetnp_encoder:
+  _target_: tnp.models.gridded_atetnp.OOTGGriddedATETNPEncoder
+  tetransformer_encoder: ${transformer_encoder}
+  grid_encoder: ${grid_encoder}
+  y_encoder: ${y_encoder}
+  y_grid_encoder: ${y_grid_encoder}
+  basis_fn: ${basis_fn}
+  p_basis_dropout: ${params.p_basis_dropout}
+
+transformer_encoder:
+  _target_: tnp.networks.transformer.GriddedTransformerEncoder
+  grid_decoder: ${grid_decoder}
+  mhsa_layer: ${swin_layer}
+  num_layers: ${params.num_layers}
+
+swin_layer:
+  _target_: tnp.networks.swin_attention.SWINAttentionLayer
+  window_sizes: ${params.window_sizes}
+  shift_sizes: ${params.shift_sizes}
+  roll_dims: ${params.roll_dims}
+  mhsa_layer: ${swin_te_mhsa_layer}
+
+swin_te_mhsa_layer:
+  _target_: tnp.networks.teattention_layers.GriddedMultiHeadSelfTEAttentionLayer
+  embed_dim: ${params.embed_dim}
+  num_heads: ${params.num_heads}
+  head_dim: ${params.head_dim}
+  grid_shape: ${params.window_sizes}
+  feedforward_dim: ${params.embed_dim}
+  norm_first: ${params.norm_first}
+
+y_encoder:
+  _target_: tnp.networks.mlp.MLP
+  in_dim: 2
+  out_dim: ${params.embed_dim}
+  num_layers: 2
+  width: ${params.embed_dim}
+
+y_grid_encoder:
+  _target_: tnp.networks.mlp.MLP
+  in_dim: ${eval:'${params.dim_gridded_y}'}
+  out_dim: ${params.embed_dim}
+  num_layers: 2
+  width: ${params.embed_dim}
+
+basis_fn:
+  _target_: tnp.networks.modules.ModuleOnFourierExpandedInput
+  module: ${basis_fn_mlp}
+  x_range: ${params.grid_range}
+  num_fourier: ${params.num_fourier}
+
+basis_fn_mlp:
+  _target_: tnp.networks.mlp.MLP
+  in_dim: ${eval:'${params.dim_x} * ${params.num_fourier}'}
+  out_dim: ${params.embed_dim}
+  num_layers: 2
+  width: ${params.embed_dim}
+
+tnp_decoder:
+  _target_: tnp.models.tnp.TNPDecoder
+  z_decoder: ${z_decoder}
+
+z_decoder:
+  _target_: tnp.networks.mlp.MLP
+  in_dim: ${params.embed_dim}
+  out_dim: ${eval:'2 * ${params.dim_y}'}
+  num_layers: 2
+  width: ${params.embed_dim}
+
+likelihood:
+  _target_: tnp.likelihoods.gaussian.HeteroscedasticNormalLikelihood
+
+optimiser:
+  _target_: torch.optim.AdamW
+  _partial_: True
+  lr: 5.0e-4
+
+params:
+  epochs: 300
+  embed_dim: 128
+  num_heads: 8
+  head_dim: 16
+  norm_first: True
+  num_layers: 5
+  linear_attention: False
+  window_sizes: [4, 4]
+  shift_sizes: [2, 2]
+  top_k_ctot: 9
+  x_embed_dim: 128
+  num_fourier: 16
+  p_basis_dropout: 0.5
+  grid_encoder_grid_shape: [64, 128]
+  roll_dims: null
+  dist_fn:
+    _target_: tnp.utils.distances.haversine_dist
+    _partial_: True
+    lonlat_dims: [-1, -2]
+
+
+misc:
+  name: OOTG-SWINATETNP-L${params.num_layers}-H${params.num_heads}-D${params.embed_dim}-GS${params.grid_encoder_grid_shape}-WS${params.window_sizes}-K${params.top_k_ctot}
+  resume_from_checkpoint: null
+  gradient_clip_val: 0.5
+  plot_interval: 10
+  logging: True
+  pl_logger: True

@@ -1,0 +1,21 @@
+grid_decoder:
+  _target_: tnp.networks.te_grid_decoders.TEMHCAGridDecoder
+  mhca_layer: ${te_mhca_layer}
+  top_k_ctot: ${params.top_k_ctot}
+  roll_dims: ${params.roll_dims}
+
+te_mhca_layer:
+  _target_: tnp.networks.teattention_layers.MultiHeadCrossTEAttentionLayer
+  embed_dim: ${params.embed_dim}
+  num_heads: ${params.num_heads}
+  head_dim: ${params.head_dim}
+  feedforward_dim: ${params.embed_dim}
+  norm_first: ${params.norm_first}
+  kernel: ${te_mhca_kernel_decoder}
+
+te_mhca_kernel_decoder:
+  _target_: tnp.networks.mlp.MLP
+  in_dim: ${params.dim_x}
+  out_dim: ${params.num_heads}
+  num_layers: 2
+  width: ${params.num_heads}

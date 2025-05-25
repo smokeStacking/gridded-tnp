@@ -1,0 +1,15 @@
+cnn:
+  _target_: tnp.networks.cnn.UNet
+  dim: ${params.dim_x}
+  num_channels: ${params.num_channels}
+  num_blocks: ${params.num_blocks}
+  kernel_size: ${params.kernel_size}
+  pooling_size: ${params.pooling_size}
+  factor_chan: ${params.factor_chan}
+
+params:
+  num_channels: 128
+  num_blocks: 5
+  kernel_size: 5
+  pooling_size: 2
+  factor_chan: 1
