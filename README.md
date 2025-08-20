@@ -1,5 +1,6 @@
-# Gridded Transformer Neural Processes
-A framework for implementing and reproducing the paper "Gridded Transformer Neural Processes for Spatio-Temporal Data" (ICML 2025) in Python.
+# Gridded Transformer Neural Processes (G-TNP)
+
+A fork of the original G-TNP repo which is a framework for implementing and reproducing the paper "Gridded Transformer Neural Processes for Spatio-Temporal Data" (ICML 2025) in Python. This repo will be used to develop the models that are used in other inversion and data assimilation problems for our projects.
 
 ## Setting up the conda environment.
 ```bash
