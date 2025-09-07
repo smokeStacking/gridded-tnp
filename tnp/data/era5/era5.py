@@ -43,7 +43,8 @@ class BaseERA5DataGenerator(DataGenerator, ABC):
         time_range: Tuple[str, str] = ("2019-06-01", "2019-06-31"),
         lat_range: Tuple[float, float] = (-90.0, 90.0),
         lon_range: Tuple[float, float] = (-180.0, 180.0),
-        batch_time_steps: int = 1,
+        batch_time_steps: int = 1, #input time steps
+        latent_time_steps: Optional[int] = None, #latent time steps
         batch_grid_size: Optional[Tuple[int, int]] = None,
         data_vars: Tuple[str, ...] = ("t2m",),
         t_spacing: int = 1,
@@ -69,6 +70,8 @@ class BaseERA5DataGenerator(DataGenerator, ABC):
         # How large each sampled grid should be (in indicies).
         self.batch_time_steps = batch_time_steps
         self.batch_grid_size = batch_grid_size
+
+        self.latent_time_steps = latent_time_steps
 
         self.t_spacing = t_spacing
         self.use_time = use_time
@@ -323,7 +326,7 @@ class ERA5DataGenerator(BaseERA5DataGenerator):
         self.pc_dist = torch.distributions.Uniform(min_pc, max_pc)
         self.pt = pt
 
-    def generate_batch(self, batch_shape: Optional[torch.Size] = None) -> Batch:
+    def generate_batch(self, batch_shape: Optional[torch.Size] = None, target_time_slice: Optional[slice] = None) -> Batch:
         assert self.data is not None, "Data has not been loaded. Cannot generate batch."
         batch_size = self.batch_size if batch_shape is None else batch_shape[0]
 
@@ -337,7 +340,7 @@ class ERA5DataGenerator(BaseERA5DataGenerator):
         pc = self.pc_dist.sample()
 
         # Get batch.
-        batch = self.sample_batch(pc=pc, pt=self.pt, x_grid=x_grid, data_vars=data_vars)
+        batch = self.sample_batch(pc=pc, pt=self.pt, x_grid=x_grid, data_vars=data_vars, target_time_slice=target_time_slice)
         return batch
 
     def sample_masks(
@@ -434,6 +437,7 @@ class ERA5DataGenerator(BaseERA5DataGenerator):
         pt: float,
         x_grid: torch.Tensor,
         data_vars: Dict[str, torch.Tensor],
+        **kwargs,
     ) -> Batch:
 
         if not self.use_time:
