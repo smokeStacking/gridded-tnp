@@ -77,16 +77,14 @@ class MultiModalERA5DataGenerator(ERA5DataGenerator):
 
         # Apply target_time_slice to filter out specific time steps from targets
         if target_time_slice is not None:
-            assert target_time_slice[0] >= 0 and target_time_slice[1] <= time_grid.shape[1], "target_time_slice must be within the range of the time_grid"
-            # output_time_grid = time_grid[..., target_time_slice]
+            assert target_time_slice[0] >= 0 and target_time_slice[1] <= x_grid.shape[1], f"target_time_slice {target_time_slice} must be within the range of the input time_grid of shape {x_grid.shape[0]}"
             # Create filtered grids for target sampling
             x_grid_target = x_grid[..., target_time_slice, :, :, :]
             data_vars_target = {k: v[..., target_time_slice, :, :] for k, v in data_vars.items()}
-            # B, T, H, W, N = x_grid_target.shape
+
         else:
             x_grid_target = x_grid
             data_vars_target = data_vars
-            # B, T, H, W, N = x_grid.shape
 
         xc: Dict[str, torch.Tensor] = {}
         yc: Dict[str, torch.Tensor] = {}
