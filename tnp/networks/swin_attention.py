@@ -50,7 +50,7 @@ class SWINAttentionLayer(nn.Module):
         grid_shape = torch.as_tensor(x.shape[1:-1], dtype=int)
         padded_grid_shape = grid_shape + torch.as_tensor(
             tuple(
-                self.window_sizes[i] - grid_shape[i] % self.window_sizes[i]
+                (self.window_sizes[i] - grid_shape[i] % self.window_sizes[i]) % self.window_sizes[i]
                 for i in range(len(grid_shape))
             )
         )
@@ -210,7 +210,6 @@ def window_partition(x: torch.Tensor, window_sizes: torch.Tensor):
         f"b {paired} e -> b ({' '.join(n_strings)}) ({' '.join(d_strings)}) e"
     )
     reshape_vars = dict(zip(d_strings, window_sizes))
-
     return einops.rearrange(x, reshape_pattern, **reshape_vars)
 
 
@@ -288,7 +287,7 @@ def get_padding_tuple(
     grid_shape: torch.Tensor, window_sizes: torch.Tensor
 ) -> Tuple[Tuple[int, int], ...]:
     padding = tuple(
-        window_sizes[i] - grid_shape[i] % window_sizes[i]
+        (window_sizes[i] - grid_shape[i] % window_sizes[i]) % window_sizes[i]
         for i in range(len(grid_shape))
     )
     padding_tuple = tuple(
@@ -303,7 +302,8 @@ def add_padding(
     x: torch.Tensor, window_sizes: torch.Tensor, value: float = 0.0
 ) -> torch.Tensor:
     padding_tuple = get_padding_tuple(x.shape[1:-1], window_sizes)
-    padding_tuple = tuple(itertools.chain(*padding_tuple))  # type: ignore[arg-type]
+    print(f"add_padding: x.shape[1:-1]={x.shape[1:-1]}, window_sizes={window_sizes}, padding_tuple={padding_tuple}")
+    padding_tuple = tuple(itertools.chain(*reversed(padding_tuple)))  # type: ignore[arg-type]
     x = nn.functional.pad(x, (0, 0, *padding_tuple), mode="constant", value=value)
 
     return x
@@ -314,7 +314,9 @@ def remove_padding(
     x: torch.Tensor, grid_shape: torch.Tensor, window_sizes: torch.Tensor
 ) -> torch.Tensor:
     padding_tuple = get_padding_tuple(grid_shape, window_sizes)
-    slices = tuple(slice(p[0], -p[1]) for p in padding_tuple)
+    slices = tuple(
+    slice(p[0], -p[1] if p[1] > 0 else None) for p in padding_tuple
+)
     x = x[:, *slices, :]
 
     return x

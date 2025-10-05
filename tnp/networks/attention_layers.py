@@ -113,6 +113,8 @@ class MultiHeadSelfAttentionLayer(BaseMultiHeadAttentionLayer):
         x = self.attn(x, mask=mask)
         return self.attn_dropout(x)
 
+
+    
     @check_shapes("x: [m, n, d]", "mask: [m, n, n]", "return: [m, n, d]")
     def forward(
         self, x: torch.Tensor, mask: Optional[torch.Tensor] = None
