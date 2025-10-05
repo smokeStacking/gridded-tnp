@@ -35,8 +35,8 @@ class MultiModalGridEncoder(nn.Module):
             self.time_dim = None
 
     @check_shapes(
-        "x.values(): [m, n, dx]",
-        "z.values(): [m, n, dz]",
+        "x.values(): [m, ..., dx]", #loosening requirement for num of context points to be the same for all modes
+        "z.values(): [m, ..., dz]", #same for z
         "time_grid: [m, nt]",
         "return[0]: [m, ..., dx]",
         "return[1]: [m, ..., dz]",
