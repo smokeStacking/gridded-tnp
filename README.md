@@ -4,9 +4,8 @@ A fork of the original G-TNP repo which is a framework for implementing and repr
 
 ## Setting up the conda environment.
 ```bash
-conda create -n tnp python=3.12
-conda activate tnp
-pip install -r requirements.txt
+conda create -n my_env python=3.12
+conda activate my_env
 pip install -e .
 ```
 
