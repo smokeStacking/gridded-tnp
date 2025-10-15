@@ -86,8 +86,14 @@ class MultiModalGriddedTNPEncoder3D(nn.Module):
         
         print(f"G-TNP Encoder xt shape: {xt.shape}, time_grid shape: {time_grid.shape}")
 
-        # Use separate encoders for each modality.
-        xc_list = list(xc.values()) # Get all mode coordinate tensors
+        # Extract pressure_levels if present (not a coordinate, used only for y_encoder)
+        pressure_levels = xc.get('pressure_levels', None)
+        
+        # Filter out pressure_levels from coordinates before encoding
+        xc_coords = {k: v for k, v in xc.items() if k != 'pressure_levels'}
+
+        # Use separate encoders for each modality (excluding pressure_levels)
+        xc_list = [xc_coords[mod] for mod in yc.keys() if mod in xc_coords]  # Only coords, no pressure
         yc_list = list(yc.values())
         nc_list = [xcm.shape[-2] for xcm in xc_list] # Track sizes per mode
         x = torch.cat(xc_list, dim=1) # Concatenate along point dimension
@@ -108,7 +114,21 @@ class MultiModalGriddedTNPEncoder3D(nn.Module):
             for mod, yc_ in zip(yc, yc_list):
                 if yc_.dim() > 3: #3d variables need to be flattened: {B, xc, yc, 1} -> {B, xc, yc}
                     yc_ = yc_.squeeze(dim=-1)
-                yc_encoded_list.append(self.y_encoder[mod](yc_))
+                
+                # Check if pressure conditioning is available (single pressure_levels for all 3D vars)
+                if pressure_levels is not None:
+                    # Use pressure-conditioned encoder with shared pressure_levels
+                    # Pressure-conditioned encoders expect (y, pressure)
+                    # print(f"G-TNP Encoder [{mod}] yc_ shape: {yc_.shape}, pressure_levels shape: {pressure_levels.shape}")
+                    try:
+                        yc_encoded = self.y_encoder[mod](yc_, pressure_levels)
+                    except TypeError:
+                        # Fall back to standard encoder if it doesn't accept pressure
+                        yc_encoded = self.y_encoder[mod](yc_)
+                    yc_encoded_list.append(yc_encoded)
+                else:
+                    # Standard encoding without pressure
+                    yc_encoded_list.append(self.y_encoder[mod](yc_))
         else:
             yc_encoded_list = yc_list
 
@@ -120,15 +140,16 @@ class MultiModalGriddedTNPEncoder3D(nn.Module):
             zc[mod] = torch.cat((xc_encoded, yc_encoded), dim=-1)
             zc[mod] = self.xy_encoder[mod](zc[mod])
 
+        # Apply x_grid_dims if specified (already filtered out pressure_levels in xc_coords)
         if self.x_grid_dims is not None:
-            xc = {mod: xc[mod][..., self.x_grid_dims] for mod in xc.keys()}
+            xc_coords = {mod: xc_coords[mod][..., self.x_grid_dims] for mod in xc_coords.keys()}
             xt = xt[..., self.x_grid_dims]
 
-        # Encode to grid using original xc.
+        # Encode to grid using coordinate xc (already filtered, no pressure_levels).
         if time_grid is not None:
-            xc_grid, zc_grid = self.grid_encoder(xc, zc, time_grid)
+            xc_grid, zc_grid = self.grid_encoder(xc_coords, zc, time_grid)
         else:
-            xc_grid, zc_grid = self.grid_encoder(xc, zc)
+            xc_grid, zc_grid = self.grid_encoder(xc_coords, zc)
 
         # Apply transformer encoder
         zt = self.transformer_encoder(xc_grid, zc_grid, xt, zt)
@@ -149,7 +170,7 @@ class MultiModalGriddedTNP3D(MultiModalConditionalNeuralProcess):
     
     #special check to allow different shapes for xc and yc
     @check_shapes(
-        "xc.values(): [m, ..., dx]",
+        "xc.values(): [m, ..., ...]",
         "yc.values(): [m, ..., ...]",
         "xt: [m, nt, dx]",
         "time_grid: [m, t_grid]",

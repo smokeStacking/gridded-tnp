@@ -98,3 +98,57 @@ class MLPWithEmbedding(MLP):
         x = torch.cat((x_non_embedded, *embeddings), dim=-1)
         out = super().forward(x)
         return out
+
+
+class PressureConditionedMLP(nn.Module):
+    """
+    Temperature [B, N, 34]  +  Pressure [B, N, 34]
+         ↓                        ↓
+    [B, N, 34, 1]          Fourier: [B, N, 34, 10]
+         └──────────concat──────────┘
+                    ↓
+             [B, N, 34, 11]
+                    ↓
+          Flatten: [B, N, 374]
+                    ↓
+        MLP: 374 → 128 → 128 → 128
+                    ↓
+             [B, N, 128]
+    """
+    def __init__(
+        self,
+        value_dim: int,
+        pressure_encoder: nn.Module,
+        out_dim: int,
+        num_layers: int,
+        width: int,
+        nonlinearity: Optional[nn.Module] = None,
+        dtype: Optional[torch.dtype] = None,
+    ):
+        super().__init__()
+        self.pressure_encoder = pressure_encoder
+        
+        # Input: L × (1 value + F pressure features)
+        mlp_in_dim = value_dim * (1 + pressure_encoder.num_wavelengths)
+        
+        self.mlp = MLP(
+            in_dim=mlp_in_dim,
+            out_dim=out_dim,
+            num_layers=num_layers,
+            width=width,
+            nonlinearity=nonlinearity,
+            dtype=dtype,
+        )
+    
+    def forward(self, y: torch.Tensor, pressure: torch.Tensor) -> torch.Tensor:
+        B, N, L = y.shape
+        
+        # Pressure embeddings: [B, N, L, F]
+        p_embed = self.pressure_encoder(pressure)
+        
+        # Concat: [B, N, L, 1] + [B, N, L, F] -> [B, N, L, 1+F]
+        y_expanded = y.unsqueeze(-1)
+        fused = torch.cat([y_expanded, p_embed], dim=-1)
+        
+        # Flatten and project: [B, N, L*(1+F)] -> [B, N, out_dim]
+        return self.mlp(fused.reshape(B, N, -1))

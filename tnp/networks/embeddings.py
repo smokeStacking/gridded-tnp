@@ -130,3 +130,64 @@ class FourierEmbedding(Embedding):
         encoding = torch.cat((torch.sin(prod), torch.cos(prod)), dim=-1)
 
         return encoding.float()  # Cast to `float32` to avoid incompatibilities.
+
+
+class PressureFourierEncoder(nn.Module):
+    """
+    Encoder for pressure levels using Fourier features.
+    
+    Applies Fourier embedding to pressure values to capture the hierarchical
+    structure of the atmosphere across pressure levels.
+    
+    Args:
+        num_wavelengths: Number of Fourier wavelengths (must be even)
+        pressure_range: Tuple of (min, max) pressure in hPa
+    """
+    def __init__(self, num_wavelengths: int = 10, pressure_range: tuple = (1.0, 1013.0)):
+        super().__init__()
+        self.num_wavelengths = num_wavelengths
+        self.pressure_range = pressure_range
+        
+        self.fourier = FourierEmbedding(
+            lower=pressure_range[0], 
+            upper=pressure_range[1],
+            active_dim=0,  # pressure is 1D scalar
+            num_wavelengths=num_wavelengths,
+            assert_range=False  # Don't assert range to allow flexibility
+        )
+    
+    def forward(self, pressure: torch.Tensor) -> torch.Tensor:
+        """
+        Apply Fourier embedding to pressure values.
+        
+        Args:
+            pressure: Pressure tensor of shape [B, N, L] or [B, N, 1] or [B, N]
+                     where L is number of levels
+        
+        Returns:
+            Fourier embedded pressure:
+            - For 3D: [B, N, L, num_wavelengths] (per-level embeddings)
+            - For 2D: [B, N, num_wavelengths]
+        """
+        if pressure.dim() == 3 and pressure.shape[-1] > 1:
+            # Shape [B, N, L] - apply Fourier to each level independently
+            # Output: [B, N, L, num_wavelengths] for per-level processing
+            B, N, L = pressure.shape
+            pressure = pressure.reshape(B * N * L, 1)  # Flatten all for Fourier
+            p_embed = self.fourier(pressure)  # [B*N*L, num_wavelengths]
+            p_embed = p_embed.reshape(B, N, L, self.num_wavelengths)  # Keep level dimension
+            return p_embed
+        elif pressure.dim() == 3 and pressure.shape[-1] == 1:
+            # Shape [B, N, 1] - apply Fourier
+            pressure = pressure.squeeze(-1).unsqueeze(-1)  # Ensure shape [B, N, 1]
+        elif pressure.dim() == 2:
+            # Shape [B, N] - add dimension
+            pressure = pressure.unsqueeze(-1)
+        
+        # Apply Fourier embedding: [B, N, 1] -> [B, N, num_wavelengths]
+        B, N, _ = pressure.shape
+        pressure = pressure.reshape(B * N, 1)
+        p_embed = self.fourier(pressure)
+        p_embed = p_embed.reshape(B, N, self.num_wavelengths)
+        
+        return p_embed
