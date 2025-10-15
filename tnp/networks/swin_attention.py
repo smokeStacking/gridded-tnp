@@ -64,9 +64,11 @@ class SWINAttentionLayer(nn.Module):
             # Construct mask used in non-shifted attention.
             unshifted_mask = torch.ones(*grid_shape, dtype=torch.bool)
             padding_tuple = get_padding_tuple(grid_shape, self.window_sizes)
-            padding_tuple = tuple(itertools.chain(padding_tuple))  # type: ignore[arg-type]
+            # padding_tuple = tuple(itertools.chain(padding_tuple))  # type: ignore[arg-type]
+            # flatten pad in reverse order (last dim first) and cast to ints
+            flat_pad = tuple(int(v) for pair in reversed(padding_tuple) for v in pair)
             unshifted_mask = torch.nn.functional.pad(
-                unshifted_mask, padding_tuple, mode="constant", value=False
+                unshifted_mask, flat_pad, mode="constant", value=False
             )
             unshifted_mask = window_partition(
                 unshifted_mask[None, ..., None], self.window_sizes
@@ -305,7 +307,7 @@ def add_padding(
     print(f"add_padding: x.shape[1:-1]={x.shape[1:-1]}, window_sizes={window_sizes}, padding_tuple={padding_tuple}")
     padding_tuple = tuple(itertools.chain(*reversed(padding_tuple)))  # type: ignore[arg-type]
     x = nn.functional.pad(x, (0, 0, *padding_tuple), mode="constant", value=value)
-
+    print(f'x shape after padding: {x.shape}')
     return x
 
 
