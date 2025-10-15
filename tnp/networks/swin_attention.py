@@ -304,10 +304,10 @@ def add_padding(
     x: torch.Tensor, window_sizes: torch.Tensor, value: float = 0.0
 ) -> torch.Tensor:
     padding_tuple = get_padding_tuple(x.shape[1:-1], window_sizes)
-    print(f"add_padding: x.shape[1:-1]={x.shape[1:-1]}, window_sizes={window_sizes}, padding_tuple={padding_tuple}")
+    # print(f"add_padding: x.shape[1:-1]={x.shape[1:-1]}, window_sizes={window_sizes}, padding_tuple={padding_tuple}")
     padding_tuple = tuple(itertools.chain(*reversed(padding_tuple)))  # type: ignore[arg-type]
     x = nn.functional.pad(x, (0, 0, *padding_tuple), mode="constant", value=value)
-    print(f'x shape after padding: {x.shape}')
+    # print(f'x shape after padding: {x.shape}')
     return x
 
 
