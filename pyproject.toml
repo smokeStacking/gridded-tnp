@@ -33,6 +33,7 @@ dependencies = [
   "HiYaPyCo>=0.7.0",
   "lightning>=2.5.5",
   "wandb>=0.22.2",
+  "zarr"
 ]
 
 [project.optional-dependencies]

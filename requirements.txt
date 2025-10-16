@@ -218,5 +218,5 @@ websocket-client==1.8.0
 wheel==0.43.0
 xarray==2024.6.0
 yarl==1.9.4
-zarr==2.18.2
+zarr
 zipp==3.19.2

@@ -102,34 +102,71 @@ class MLPWithEmbedding(MLP):
 
 class PressureConditionedMLP(nn.Module):
     """
-    Temperature [B, N, 34]  +  Pressure [B, N, 34]
-         ↓                        ↓
-    [B, N, 34, 1]          Fourier: [B, N, 34, 10]
-         └──────────concat──────────┘
-                    ↓
-             [B, N, 34, 11]
-                    ↓
-          Flatten: [B, N, 374]
-                    ↓
-        MLP: 374 → 128 → 128 → 128
-                    ↓
-             [B, N, 128]
+    MLP that conditions on pressure levels via pre-computed Fourier embeddings.
+    
+    Two modes:
+    1. Cached mode: Pressure embeddings pre-computed and stored as buffer [H*W, L, F]
+       - Memory efficient: ~88 MB for 360x180x34 grid
+       - Zero computation: just indexing and broadcasting
+       
+    2. Dynamic mode (fallback): Computes embeddings on-the-fly if cache not provided
+       - Flexible but slower
+    
+    Flow (cached mode):
+        Temperature [B, N, L]
+             ↓
+        [B, N, L, 1]
+             └──────────concat──────────┐
+                                        ↓
+        Cached Embeddings [H*W, L, F]  [B, N, L, 1+F]
+             ↓ expand to [B, N, L, F]    ↓
+                                   Flatten: [B, N, L*(1+F)]
+                                        ↓
+                                   MLP: L*(1+F) → out_dim
+                                        ↓
+                                   [B, N, out_dim]
     """
     def __init__(
         self,
         value_dim: int,
-        pressure_encoder: nn.Module,
         out_dim: int,
         num_layers: int,
         width: int,
+        pressure_embeddings: Optional[torch.Tensor] = None,
+        pressure_encoder: Optional[nn.Module] = None,
         nonlinearity: Optional[nn.Module] = None,
         dtype: Optional[torch.dtype] = None,
+        **kwargs,  # Absorb any extra config params
     ):
         super().__init__()
-        self.pressure_encoder = pressure_encoder
+        
+        # Determine number of pressure features
+        if pressure_embeddings is not None:
+            # Cache mode: use pre-computed embeddings
+            # Expected shape: [H*W, L, F]
+            if pressure_embeddings.dim() != 3:
+                raise ValueError(
+                    f"pressure_embeddings must be [H*W, L, F], got shape {pressure_embeddings.shape}"
+                )
+            self.register_buffer('pressure_embeddings', pressure_embeddings)
+            self.pressure_encoder = None
+            HW, L, F = pressure_embeddings.shape
+            self.num_pressure_features = F
+            self.spatial_size = HW
+            
+        elif pressure_encoder is not None:
+            # Dynamic mode: compute on-the-fly
+            self.pressure_embeddings = None
+            self.pressure_encoder = pressure_encoder
+            self.num_pressure_features = pressure_encoder.num_wavelengths
+            self.spatial_size = None
+        else:
+            raise ValueError(
+                "Must provide either pressure_embeddings (cached) or pressure_encoder (dynamic)"
+            )
         
         # Input: L × (1 value + F pressure features)
-        mlp_in_dim = value_dim * (1 + pressure_encoder.num_wavelengths)
+        mlp_in_dim = value_dim * (1 + self.num_pressure_features)
         
         self.mlp = MLP(
             in_dim=mlp_in_dim,
@@ -140,15 +177,55 @@ class PressureConditionedMLP(nn.Module):
             dtype=dtype,
         )
     
-    def forward(self, y: torch.Tensor, pressure: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, 
+        y: torch.Tensor, 
+        pressure: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
+        """
+        Args:
+            y: [B, N, L] variable values where N = T*H*W
+            pressure: Optional[B, N, L] pressure values (only needed if no cache)
+        
+        Returns:
+            [B, N, out_dim] encoded values conditioned on pressure
+        """
         B, N, L = y.shape
         
-        # Pressure embeddings: [B, N, L, F]
-        p_embed = self.pressure_encoder(pressure)
+        # Get pressure embeddings (cached or dynamic)
+        if self.pressure_embeddings is not None:
+            # Use cached embeddings: [H*W, L, F]
+            HW, L_cached, F = self.pressure_embeddings.shape
+            
+            if L != L_cached:
+                raise ValueError(
+                    f"Level dimension mismatch: y has {L} levels, "
+                    f"cached embeddings have {L_cached} levels"
+                )
+            
+            if N % HW != 0:
+                raise ValueError(
+                    f"Spatial dimension mismatch: N={N} must be multiple of H*W={HW}"
+                )
+            
+            # Expand cached embeddings to match batch and time dimensions
+            T = N // HW
+            # [H*W, L, F] -> [1, 1, H*W, L, F] -> [B, T, H*W, L, F] -> [B, N, L, F]
+            p_embed = self.pressure_embeddings.unsqueeze(0).unsqueeze(0)
+            p_embed = p_embed.expand(B, T, -1, -1, -1)
+            p_embed = p_embed.reshape(B, N, L, F)
+            # print(f"PressureConditionedMLP: cached embeddings shape: {p_embed.shape}")
+            
+        else:
+            # Dynamic computation using encoder
+            if pressure is None:
+                raise ValueError(
+                    "pressure must be provided when using dynamic mode (no cache)"
+                )
+            p_embed = self.pressure_encoder(pressure)  # [B, N, L, F]
         
-        # Concat: [B, N, L, 1] + [B, N, L, F] -> [B, N, L, 1+F]
-        y_expanded = y.unsqueeze(-1)
-        fused = torch.cat([y_expanded, p_embed], dim=-1)
-        
+        # Concatenate value with pressure features
+        y_expanded = y.unsqueeze(-1)  # [B, N, L, 1]
+        fused = torch.cat([y_expanded, p_embed], dim=-1)  # [B, N, L, 1+F]
         # Flatten and project: [B, N, L*(1+F)] -> [B, N, out_dim]
         return self.mlp(fused.reshape(B, N, -1))
